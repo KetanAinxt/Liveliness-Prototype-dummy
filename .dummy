@@ -1,0 +1,82 @@
+// <input type="file" id="imageInput" accept="image/*">
+// <canvas id="imageCanvas" style="display:none;"></canvas>
+// <script>
+// document.getElementById("imageInput").addEventListener("change", function (event) {
+//     const file = event.target.files[0];
+//     if (!file) {
+//         alert("Please select an image!");
+//         return;
+//     }
+
+//     const img = new Image();
+//     const reader = new FileReader();
+
+//     reader.onload = function (e) {
+//         img.src = e.target.result;
+//     };
+
+//     img.onload = function () {
+//         const canvas = document.getElementById("imageCanvas");
+//         const ctx = canvas.getContext("2d");
+
+//         // Set canvas size to image size
+//         canvas.width = img.width;
+//         canvas.height = img.height;
+
+//         // Draw the image onto the canvas
+//         ctx.drawImage(img, 0, 0);
+
+//         // Get pixel data
+//         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+//         const pixels = imageData.data;
+
+//         // Analyze for artifacts
+//         if (detectMoiréPatterns(pixels, canvas.width, canvas.height)) {
+//             alert("This image might be an image of another image (moire patterns detected).");
+//         } else if (analyzeContrast(pixels)) {
+//             alert("This image might be an image of another image (low dynamic range).");
+//         } else {
+//             alert("This image does not appear to be an image of another image.");
+//         }
+//     };
+
+//     reader.readAsDataURL(file);
+// });
+
+// function detectMoiréPatterns(pixels, width, height) {
+//     // Placeholder for actual Fourier transform or moiré detection logic
+//     // Example: Check for high-frequency patterns
+//     let patternCount = 0;
+//     for (let i = 0; i < pixels.length; i += 4) {
+//         const r = pixels[i];
+//         const g = pixels[i + 1];
+//         const b = pixels[i + 2];
+
+//         // Check for rapid changes in neighboring pixels (indicative of patterns)
+//         if (Math.abs(r - g) > 50 || Math.abs(g - b) > 50) {
+//             patternCount++;
+//         }
+//     }
+
+//     return patternCount > (width * height * 0.01); // Adjust threshold as needed
+// }
+
+// function analyzeContrast(pixels) {
+//     // Compute the standard deviation of pixel intensity
+//     let total = 0;
+//     let totalSquared = 0;
+//     let count = pixels.length / 4;
+
+//     for (let i = 0; i < pixels.length; i += 4) {
+//         const intensity = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3; // Grayscale intensity
+//         total += intensity;
+//         totalSquared += intensity * intensity;
+//     }
+
+//     const mean = total / count;
+//     const variance = totalSquared / count - mean * mean;
+//     const stdDev = Math.sqrt(variance);
+
+//     return stdDev < 40; // Low contrast threshold
+// }
+// </script>

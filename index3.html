@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Tracking</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        #navbar {
+            width: 100%;
+            background-color: #333;
+            padding: 10px;
+            color: white;
+            text-align: center;
+        }
+        #controls {
+            margin: 20px;
+        }
+        label {
+            margin-right: 10px;
+        }
+        #video-container {
+            position: relative;
+            width: 640px;
+            height: 480px;
+            display: block;
+            visibility: visible;
+        }
+        video {
+            width: 100%;
+            height: auto;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="navbar">Face Tracking</div>
+
+<div id="controls">
+    <label>
+        <input type="checkbox" id="withFaceLandmarks" onchange="onChangeWithFaceLandmarks(event)"> Show Face Landmarks
+    </label>
+    <label>
+        <input type="checkbox" id="hideBoundingBoxes" onchange="onChangeHideBoundingBoxes(event)"> Hide Bounding Boxes
+    </label>
+    <div>
+        <label for="time">Average Time:</label>
+        <input type="text" id="time" readonly>
+        <label for="fps">FPS:</label>
+        <input type="text" id="fps" readonly>
+    </div>
+</div>
+
+<div id="video-container">
+    <video id="inputVideo" autoplay muted></video>
+    <canvas id="overlay"></canvas>
+</div>
+
+<script>
+    let forwardTimes = [];
+    let withFaceLandmarks = false;
+    let withBoxes = true;
+
+    function onChangeWithFaceLandmarks(e) {
+        withFaceLandmarks = $(e.target).prop('checked');
+    }
+
+    function onChangeHideBoundingBoxes(e) {
+        withBoxes = !$(e.target).prop('checked');
+    }
+
+    function updateTimeStats(timeInMs) {
+        forwardTimes = [timeInMs].concat(forwardTimes).slice(0, 30);
+        const avgTimeInMs = forwardTimes.reduce((total, t) => total + t) / forwardTimes.length;
+        $('#time').val(`${Math.round(avgTimeInMs)} ms`);
+        $('#fps').val(`${faceapi.utils.round(1000 / avgTimeInMs)}`);
+    }
+
+    async function onPlay(videoEl) {
+        if (!videoEl.currentTime || videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
+            return setTimeout(() => onPlay(videoEl));
+
+        const options = getFaceDetectorOptions();
+        const ts = Date.now();
+        const drawBoxes = withBoxes;
+        const drawLandmarks = withFaceLandmarks;
+        let task = faceapi.detectAllFaces(videoEl, options);
+        task = withFaceLandmarks ? task.withFaceLandmarks() : task;
+        const results = await task;
+        updateTimeStats(Date.now() - ts);
+
+        const canvas = $('#overlay').get(0);
+        const dims = faceapi.matchDimensions(canvas, videoEl, true);
+        const resizedResults = faceapi.resizeResults(results, dims);
+
+        if (drawBoxes) {
+            faceapi.draw.drawDetections(canvas, resizedResults);
+        }
+
+        if (drawLandmarks) {
+            faceapi.draw.drawFaceLandmarks(canvas, resizedResults);
+        }
+
+        setTimeout(() => onPlay(videoEl));
+    }
+
+    async function run() {
+        await changeFaceDetector(TINY_FACE_DETECTOR);
+        await faceapi.loadSsdMobilenetv1Model('/');
+        await faceapi.loadFaceRecognitionModel('/');
+        await faceapi.loadFaceLandmarkModel('/');
+        changeInputSize(416);
+
+        const labels = ['1', '2'];
+        const labeledFaceDescriptors = await Promise.all(
+            labels.map(async label => {
+                const imgUrl = `surati/${label}.JPG`;
+                const img = await faceapi.fetchImage(imgUrl);
+                const fullFaceDescription = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+                if (!fullFaceDescription) {
+                    throw new Error(`no faces detected for ${label}`);
+                }
+                const faceDescriptors = [fullFaceDescription.descriptor];
+                return new faceapi.LabeledFaceDescriptors(label, faceDescriptors);
+            })
+        );
+
+        const input = document.getElementById('inputVideo');
+        const fullFaceDescriptions = await faceapi.detectAllFaces(input).withFaceLandmarks().withFaceDescriptors();
+
+        const maxDescriptorDistance = 0.6;
+        const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, maxDescriptorDistance);
+
+        const results = fullFaceDescriptions.map(fd => faceMatcher.findBestMatch(fd.descriptor));
+
+        results.forEach((bestMatch, i) => {
+            const box = fullFaceDescriptions[i].detection.box;
+            const text = bestMatch.toString();
+            const drawBox = new faceapi.draw.DrawBox(box, { label: text });
+            drawBox.draw(document.getElementById('overlay'));
+        });
+
+        onPlay($('#inputVideo').get(0));
+    }
+
+    async function startVideo() {
+    const video = document.getElementById('inputVideo');
+    navigator.mediaDevices.getUserMedia({ video: {} })
+        .then(stream => video.srcObject = stream)
+        .catch(err => console.error('Camera error:', err));
+}
+    $(document).ready(function () {
+        renderNavBar('#navbar', 'video_face_tracking');
+        initFaceDetectionControls();
+        run();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Capture</title>
+    <style>
+        #videoElement {
+            width: 100%;
+            max-width: 400px;
+        }
+        #captureCanvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Camera Capture</h1>
+    <video id="videoElement" autoplay></video>
+    <button id="startCamera">Start Camera</button>
+    <button id="captureFrame">Capture Frame</button>
+    <button id="stopCamera">Stop Camera</button>
+    <p>Captured Frames: <span id="frameCount">0</span></p>
+
+    <canvas id="captureCanvas"></canvas>
+
+    <script>
+        const videoElement = document.getElementById('videoElement');
+        const startCameraButton = document.getElementById('startCamera');
+        const captureFrameButton = document.getElementById('captureFrame');
+        const stopCameraButton = document.getElementById('stopCamera');
+        const frameCountDisplay = document.getElementById('frameCount');
+        const captureCanvas = document.getElementById('captureCanvas');
+        const canvasContext = captureCanvas.getContext('2d');
+        
+        let stream = null;
+        let capturedFrames = [];
+
+        // Start Camera
+        startCameraButton.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = stream;
+                console.log('Camera started');
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+            }
+        });
+
+        // Capture Frame
+        captureFrameButton.addEventListener('click', () => {
+            if (stream) {
+                // Set canvas size to match video
+                captureCanvas.width = videoElement.videoWidth;
+                captureCanvas.height = videoElement.videoHeight;
+
+                // Draw the current video frame onto the canvas
+                canvasContext.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
+
+                // Get the image data as a data URL (base64 encoded string)
+                const frameData = captureCanvas.toDataURL('image/png');
+                capturedFrames.push(frameData);
+
+                // Update frame count display
+                frameCountDisplay.textContent = capturedFrames.length;
+
+                console.log('Frame captured:', frameData);
+            } else {
+                console.warn('Camera is not started.');
+            }
+        });
+
+        // Stop Camera
+        stopCameraButton.addEventListener('click', () => {
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                videoElement.srcObject = null;
+                stream = null;
+                console.log('Camera stopped');
+            }
+        });
+    </script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Capture</title>
+    <style>
+        #videoElement {
+            width: 100%;
+            max-width: 400px;
+        }
+        #captureCanvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Camera Capture</h1>
+    <video id="videoElement" autoplay></video>
+    <button id="startCamera">Start Camera</button>
+    <button id="stopCamera">Stop Camera</button>
+    <p>Captured Frames: <span id="frameCount">0</span></p>
+
+    <canvas id="captureCanvas"></canvas>
+
+    <script>
+        const videoElement = document.getElementById('videoElement');
+        const startCameraButton = document.getElementById('startCamera');
+        const stopCameraButton = document.getElementById('stopCamera');
+        const frameCountDisplay = document.getElementById('frameCount');
+        const captureCanvas = document.getElementById('captureCanvas');
+        const canvasContext = captureCanvas.getContext('2d');
+
+        let stream = null;
+        let capturedFrames = [];
+        let captureInterval = null;
+
+        // Start Camera
+        startCameraButton.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = stream;
+                console.log('Camera started');
+
+                // Start automatic capture every 10 seconds
+                captureInterval = setInterval(captureFrame, 10000);
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+            }
+        });
+
+        // Capture Frame
+        const captureFrame = () => {
+            if (stream) {
+                // Set canvas size to match video
+                captureCanvas.width = videoElement.videoWidth;
+                captureCanvas.height = videoElement.videoHeight;
+
+                // Draw the current video frame onto the canvas
+                canvasContext.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
+
+                // Get the image data as a data URL (base64 encoded string)
+                const frameData = captureCanvas.toDataURL('image/png');
+                capturedFrames.push(frameData);
+
+                // Update frame count display
+                frameCountDisplay.textContent = capturedFrames.length;
+
+                console.log('Frame captured:', frameData);
+            } else {
+                console.warn('Camera is not started.');
+            }
+        };
+
+        // Stop Camera
+        stopCameraButton.addEventListener('click', () => {
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                videoElement.srcObject = null;
+                stream = null;
+
+                // Stop the automatic capture interval
+                if (captureInterval) {
+                    clearInterval(captureInterval);
+                    captureInterval = null;
+                }
+
+                console.log('Camera stopped');
+            }
+        });
+    </script>
+</body>
+</html>
